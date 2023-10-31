@@ -1,7 +1,8 @@
 #include "zip.h"
+
 #include "hashing.h"
 
-static int  isNumber(char* s);
+static int isNumber(char* s);
 static void printInfo();
 
 int main(int argc, char** argv) {
@@ -18,9 +19,8 @@ int main(int argc, char** argv) {
       retCode = (int)ERROR;
     }
   } else {
-      retCode = (int)ERROR;
+    retCode = (int)ERROR;
   }
-
 
   if (config.hFlag) {
     retCode = ERROR;
@@ -41,7 +41,6 @@ int main(int argc, char** argv) {
     }
   } else if (retCode == ERROR) {
     fprintf(stderr, USAGE);
-
   }
 
   return retCode;
@@ -54,22 +53,22 @@ int scanOptions(int argc, char** argv, OptionsConfig* config) {
   while (((flag = getopt(argc, argv, "hfc:"))) != -1) {
     switch (flag) {
       case 'h':
-      config->hFlag = 1;
-      break;
+        config->hFlag = 1;
+        break;
       case 'f':
-      config->fFlag = 1;
-      break;
+        config->fFlag = 1;
+        break;
       case 'c':
-      config->cFlag = 1;
-      result = (int)readFromC(optarg, config);
-      break;
+        config->cFlag = 1;
+        result = (int)readFromC(optarg, config);
+        break;
       default:
-      result = (int)ERROR;
+        result = (int)ERROR;
     }
 
     if (result < 0) break;
   }
-  
+
   if (result >= 0) {
     result = optind;
   }
@@ -77,12 +76,12 @@ int scanOptions(int argc, char** argv, OptionsConfig* config) {
   return result;
 }
 
-eErrorCode readFromC (char* optarg, OptionsConfig* config) {
+eErrorCode readFromC(char* optarg, OptionsConfig* config) {
   eErrorCode retCode = OK;
   int chunksNum = atoi(optarg);
   int isNum = isNumber(optarg);
   if (!chunksNum || !isNum || ((unsigned)chunksNum > MAX_CHUNK_SIZE) ||
-                              ((unsigned)chunksNum < MIN_CHUNK_SIZE)) {
+      ((unsigned)chunksNum < MIN_CHUNK_SIZE)) {
     fprintf(stderr, "-c arg is number from 1 to 1024 * 1024 * 1024\n");
     retCode = ERROR;
   } else {
@@ -94,7 +93,8 @@ eErrorCode readFromC (char* optarg, OptionsConfig* config) {
 }
 
 // compression func
-int zip(const char* filename, const char* archive_filename, OptionsConfig config) {
+int zip(const char* filename, const char* archive_filename,
+        OptionsConfig config) {
   // calc file hash at start
   unsigned char hash_start[SHA256_DIGEST_LENGTH];
   if (calculate_file_hash(filename, hash_start) == -1) {
@@ -118,7 +118,9 @@ int zip(const char* filename, const char* archive_filename, OptionsConfig config
   }
 
   // open archive file for writing
-  int archiveOverwrite = (config.fFlag) ? (O_CREAT | O_WRONLY | O_TRUNC) : (O_CREAT | O_WRONLY | O_TRUNC | O_EXCL);
+  int archiveOverwrite = (config.fFlag)
+                             ? (O_CREAT | O_WRONLY | O_TRUNC)
+                             : (O_CREAT | O_WRONLY | O_TRUNC | O_EXCL);
   int archive_fd = open(archive_filename, archiveOverwrite, 0666);
   if (archive_fd == -1 || archive_fd == EEXIST) {
     if (archive_fd == EEXIST) {
@@ -134,7 +136,8 @@ int zip(const char* filename, const char* archive_filename, OptionsConfig config
   off_t input_size = st.st_size;
 
   // mem mapping of input file
-  void* input_data = mmap(NULL, input_size, PROT_READ, MAP_PRIVATE, input_fd, 0);
+  void* input_data =
+      mmap(NULL, input_size, PROT_READ, MAP_PRIVATE, input_fd, 0);
   if (input_data == MAP_FAILED) {
     perror("Error mapping input file to memory");
     close(input_fd);
@@ -203,7 +206,7 @@ int zip(const char* filename, const char* archive_filename, OptionsConfig config
 
 // -------------------------- static funcs --------------------------
 int isNumber(char* s) {
-  for (int i = 0; s[i]!= '\0'; i++) {
+  for (int i = 0; s[i] != '\0'; i++) {
     if (!isdigit(s[i])) {
       return 0;
     }
@@ -212,10 +215,12 @@ int isNumber(char* s) {
 }
 
 void printInfo() {
-  printf("Usage: zip [options] filename [dest_archive.zip]\n"\
-          "Options:\n"\
-          "  -c CHUNKS_NUMBER\n"\
-          "    Chunks size in compression algorithm in bytes from 1 to 1024 * 1024 * 2 (2MB)\n"\
-          "  -f\n"\
-          "    Force overwriting of destonation file, if it's existing.");
+  printf(
+      "Usage: zip [options] filename [dest_archive.zip]\n"
+      "Options:\n"
+      "  -c CHUNKS_NUMBER\n"
+      "    Chunks size in compression algorithm in bytes from 1 to 1024 * 1024 "
+      "* 2 (2MB)\n"
+      "  -f\n"
+      "    Force overwriting of destonation file, if it's existing.");
 }
