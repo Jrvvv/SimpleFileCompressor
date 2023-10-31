@@ -97,8 +97,12 @@ int unzip(const char* archive_filename, const char* filename,
   int fileOverwrite = (config.fFlag) ? (O_CREAT | O_WRONLY | O_TRUNC)
                                      : (O_CREAT | O_WRONLY | O_TRUNC | O_EXCL);
   int output_fd = open(filename, fileOverwrite, 0666);
-  if (output_fd == -1) {
-    perror("Error opening output file");
+  if (output_fd == -1 || output_fd == EEXIST) {
+    if (output_fd == EEXIST) {
+      perror("Archive already exist, run with -f to overwrite");
+    } else {
+      perror("Error opening output file");
+    }
     close(archive_fd);
     return EXIT_FAILURE;
   }
