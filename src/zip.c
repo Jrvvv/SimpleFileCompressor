@@ -37,10 +37,10 @@ int main(int argc, char** argv) {
       }
       retCode = zip(input_filename, archive_filename, config);
     } else {
-      fprintf(stderr, USAGE);
+      if (!config.hFlag) fprintf(stderr, USAGE);
     }
   } else if (retCode == ERROR) {
-    fprintf(stderr, USAGE);
+    if (!config.hFlag) fprintf(stderr, USAGE);
   }
 
   return retCode;

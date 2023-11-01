@@ -1,17 +1,9 @@
 CC = gcc
-CFLAGS = -Wall -Werror -Wextra -std=c11
+CFLAGS = -Wall -Werror -Wextra -std=c11 -g
 LIBS = -lz -lssl -lcrypto
 
 SRCS_ZIP := src/zip.c src/hashing.c
 SRCS_UNZIP := src/unzip.c src/hashing.c
-
-
-OS := $(shell uname)
-ifeq ($(OS),Linux) # определяем ОС
-TEST_LIBS = -lcheck -lm -lsubunit
-else
-TEST_LIBS = -lcheck
-endif
 
 all : clean zip unzip test
 
@@ -22,13 +14,13 @@ unzip :
 	$(CC) $(CFLAGS) $(SRCS_UNZIP) -o build/$@ $(LIBS)
 
 test: zip unzip
-	sh test.sh
+	bash tests/test.sh
 
-cppcheck:
+analyze:
 	cppcheck --enable=all --suppress=missingIncludeSystem src/*.h src/*.c
 
 clean :
-	rm -rf build/* tests/files/*.zip tests/files/*.unzip
+	rm -rf build/* tests/files/*.zip tests/files/*.unzip tests/files/*.file
 
 rebuild : clean all
 

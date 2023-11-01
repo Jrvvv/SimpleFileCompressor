@@ -33,12 +33,11 @@ int main(int argc, char** argv) {
       const char* output_filename = (argv[1]) ? argv[1] : "output";
       retCode = unzip(archive_filename, output_filename, config);
     } else {
-      fprintf(stderr, USAGE);
+      if (!config.hFlag) fprintf(stderr, USAGE);
     }
   } else if (retCode == ERROR) {
-    fprintf(stderr, USAGE);
+    if (!config.hFlag) fprintf(stderr, USAGE);
   }
-
   return retCode;
 }
 
@@ -109,6 +108,10 @@ int unzip(const char* archive_filename, const char* filename,
 
   // getting archive file size
   off_t input_size = st.st_size;
+
+  // if (!input_size) {
+  //   ftruncate(archive_fd, DEFAULT_CHUNK_SIZE);
+  // }
 
   // mem mapping of archive file
   void* archive_data =
@@ -184,7 +187,7 @@ int unzip(const char* archive_filename, const char* filename,
 // -------------------------- static funcs --------------------------
 void printInfo() {
   printf(
-      "Usage: Usage: unzip source_archive.zip [options] [output]\n"
+      "Usage: unzip source_archive.zip [options] [output]\n"
       "Options:\n"
       "  -f\n"
       "    Force overwriting of destonation file, if it's existing.");
