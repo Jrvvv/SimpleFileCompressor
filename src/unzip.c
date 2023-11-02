@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
 // parsing args with getopt
 int scanOptions(int argc, char** argv, OptionsConfig* config) {
   int flag;
-  int result = (int)OK;
+  int result = 0;
   while (((flag = getopt(argc, argv, "hf"))) != -1) {
     switch (flag) {
       case 'h':
@@ -52,14 +52,18 @@ int scanOptions(int argc, char** argv, OptionsConfig* config) {
         config->fFlag = 1;
         break;
       default:
-        result = (int)ERROR;
+        result = -1;
     }
 
-    if (result < 0) break;
+    if (config->hFlag == 1) {
+      break;
+    }
   }
 
   if (result >= 0) {
     result = optind;
+  } else if (config->hFlag) {
+    result = 0;
   }
 
   return result;

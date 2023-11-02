@@ -91,7 +91,7 @@ zip_unzip() {
                 echo "-------------------"
                 echo PARAMS ARE ${zip_flags} ${unzip_flags} ${result}
             fi
-
+        # if -h used no error possible
         elif grep -q 'h' <<< ${zip_flags} || grep -q 'h' <<< ${unzip_flags} ; then
             (( count++ ))
             (( success++ ))
@@ -117,9 +117,9 @@ if [ -e ${ZIP_APP} ] && [ -e ${UNZIP_APP} ]; then
     fi
     if [ -e ${log_name} ]; then
         rm ${log_name}
-    fis
+    fi
 
-    # test cases: args of zip, args of unzip and expected error(1)/no_error(0)
+    # test cases: args for zip, args for unzip, expected error(1)/no_error(0), list of filenames (exist/don't exist)
     zip_unzip ""                                            ""    "0"   "${filenames[@]}"
     zip_unzip ""                                            ""    "1"   "${filename_not_existing[@]}"
     zip_unzip "-f -c 100"                                   "-f"  "0"   "${filenames[@]}"
@@ -139,10 +139,7 @@ if [ -e ${ZIP_APP} ] && [ -e ${UNZIP_APP} ]; then
     zip_unzip "-f"                                          "-fa" "1"   "${filenames[@]}"
     zip_unzip "-f"                                          "-h"  "0"   "${filenames[@]}"
 
-
-
     sudo rm -f tests/files/*.zip tests/files/*.unzip
-
 
     echo "---------------------"
     echo "success: $success"
