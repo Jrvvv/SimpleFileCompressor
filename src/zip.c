@@ -23,11 +23,9 @@ int main(int argc, char** argv) {
   }
 
   if (config.hFlag) {
-    retCode = ERROR;
     printInfo();
-  }
-
-  if (retCode == (int)OK) {
+  
+  } else if (retCode == (int)OK) {
     // filename or filename + archive name
     if (argc >= 1 && argc <= 2) {
       const char* input_filename = argv[0];
@@ -37,10 +35,10 @@ int main(int argc, char** argv) {
       }
       retCode = zip(input_filename, archive_filename, config);
     } else {
-      if (!config.hFlag) fprintf(stderr, USAGE);
+      fprintf(stderr, USAGE);
     }
-  } else if (retCode == ERROR) {
-    if (!config.hFlag) fprintf(stderr, USAGE);
+  } else {
+    fprintf(stderr, USAGE);
   }
 
   return retCode;
@@ -99,14 +97,14 @@ int zip(const char* filename, const char* archive_filename,
   unsigned char hash_start[SHA256_DIGEST_LENGTH];
   if (calculate_file_hash(filename, hash_start) == -1) {
     perror("Error hashing files");
-    return EXIT_FAILURE;
+    return (int)ERROR;
   }
 
   // open input file for reading
   int input_fd = open(filename, O_RDONLY);
   if (input_fd == -1) {
     perror("Error opening input file");
-    return EXIT_FAILURE;
+    return (int)ERROR;
   }
 
   // getting input file stats
@@ -114,7 +112,7 @@ int zip(const char* filename, const char* archive_filename,
   if (fstat(input_fd, &st) == -1) {
     perror("Error getting file size");
     close(input_fd);
-    return EXIT_FAILURE;
+    return (int)ERROR;
   }
 
   // open archive file for writing
@@ -129,7 +127,7 @@ int zip(const char* filename, const char* archive_filename,
       perror("Error opening output file");
     }
     close(input_fd);
-    return EXIT_FAILURE;
+    return (int)ERROR;
   }
 
   // getting input file size
@@ -142,7 +140,7 @@ int zip(const char* filename, const char* archive_filename,
     perror("Error mapping input file to memory");
     close(input_fd);
     close(archive_fd);
-    return EXIT_FAILURE;
+    return (int)ERROR;
   }
 
   // struct init for compression
@@ -154,7 +152,7 @@ int zip(const char* filename, const char* archive_filename,
     munmap(input_data, input_size);
     close(input_fd);
     close(archive_fd);
-    return EXIT_FAILURE;
+    return (int)ERROR;
   }
 
   // passing input data ptr and its size to struct
@@ -172,7 +170,7 @@ int zip(const char* filename, const char* archive_filename,
       munmap(input_data, input_size);
       close(input_fd);
       close(archive_fd);
-      return EXIT_FAILURE;
+      return (int)ERROR;
     }
     write(archive_fd, out, config.chunksNumber - stream.avail_out);
   } while (stream.avail_out == 0);
@@ -184,7 +182,7 @@ int zip(const char* filename, const char* archive_filename,
     munmap(input_data, input_size);
     close(input_fd);
     close(archive_fd);
-    return EXIT_FAILURE;
+    return (int)ERROR;
   }
 
   // checking hashes (file at start <-> file at end)
@@ -193,7 +191,7 @@ int zip(const char* filename, const char* archive_filename,
     munmap(input_data, input_size);
     close(input_fd);
     close(archive_fd);
-    return EXIT_FAILURE;
+    return (int)ERROR;
   }
 
   // free

@@ -5,6 +5,11 @@ filenames=(
       "tests/files/test2.txt"
 )
 
+filename_not_existing=(
+      "aaaooo.txt"
+      ""
+)
+
 zip_name="tests/files/test.zip"
 unzip_name="tests/files/test.unzip"
 log_name="tests/files/output.file"
@@ -45,20 +50,27 @@ check_leaks() {
 }
 
 # running with valgrind zip and unzip using as args for zip $1 and $2 for unzip, $3 is error/no_error code
+# usage: zip_unzip [zip_flags] [unzip_flags] [result] [filename_list_elements]
 zip_unzip() {
+    local zip_flags="$1"
+    local unzip_flags="$2"
+    local result="$3"
+    shift 3
+    local current_filenames=("$@")      # list of filename array elements
+
     # executing test files in order
-    for test_file in ${filenames[@]}
-    do
-        valgrind --log-file=${log_name} --leak-check=yes --tool=memcheck -s ./${ZIP_APP} ${test_file} ${zip_name} $1 > ${log_name}
+    for test_file in "${current_filenames[@]}"; do
+        valgrind --log-file=${log_name} --leak-check=yes --tool=memcheck -s ./${ZIP_APP} ${test_file} ${zip_name} ${zip_flags} > ${log_name}
         ZIP_RET_CODE=$?
         check_leaks ${log_name}
-        
-        # dont execute if zipping ended with error
-        if [ "${ZIP_RET_CODE}" -eq 0 ]; then
-            valgrind --log-file=${log_name} --leak-check=yes --tool=memcheck -s ./${UNZIP_APP} ${zip_name} ${unzip_name} $2 > ${log_name}
+
+        # execute unzip if zipping ended without error and called without -h
+        if [ "${ZIP_RET_CODE}" -eq 0 ] && grep -vq 'h' <<< ${zip_flags}; then
+            valgrind --log-file=${log_name} --leak-check=yes --tool=memcheck -s ./${UNZIP_APP} ${zip_name} ${unzip_name} ${unzip_flags} > ${log_name}
             UNZIP_RET_CODE=$?
             check_leaks ${log_name}
-            if [ "${UNZIP_RET_CODE}" -eq 0 ]; then
+            # compare files if unzip ended without error and called without -h
+            if [ "${UNZIP_RET_CODE}" -eq 0 ] && grep -vq 'h' <<< ${unzip_flags}; then
                 compare_files ${test_file} ${unzip_name}
             fi
         fi
@@ -66,7 +78,7 @@ zip_unzip() {
         # if one of two is error and error expected -- SUCCESS, else -- FAIL
         if [ "${ZIP_RET_CODE}" -ne 0 ] || [ "${UNZIP_RET_CODE}" -ne 0 ]; then
             (( count++ ))
-            if [ $3 -ne 0 ]; then
+            if [ ${result} -ne 0 ]; then
                 (( success++ ))
                 echo "-------------------"
                 echo "test $count success"
@@ -77,8 +89,16 @@ zip_unzip() {
                 echo "-------------------"
                 echo "test $count fail"
                 echo "-------------------"
-                echo PARAMS ARE $1 $2 $3
+                echo PARAMS ARE ${zip_flags} ${unzip_flags} ${result}
             fi
+
+        elif grep -q 'h' <<< ${zip_flags} || grep -q 'h' <<< ${unzip_flags} ; then
+            (( count++ ))
+            (( success++ ))
+            echo "-------------------"
+            echo "test $count success"
+            echo "-------------------"
+            echo 
         fi
 
         sudo rm -f ${zip_name} ${unzip_name} ${log_name} tests/files/*.zip tests/files/*.unzip
@@ -97,21 +117,28 @@ if [ -e ${ZIP_APP} ] && [ -e ${UNZIP_APP} ]; then
     fi
     if [ -e ${log_name} ]; then
         rm ${log_name}
-    fi
+    fis
 
     # test cases: args of zip, args of unzip and expected error(1)/no_error(0)
-    zip_unzip ""                                            ""    "0"
-    zip_unzip "-f -c 100"                                   "-f"  "0"
-    zip_unzip "-f -c 1"                                     "-f"  "0"
-    zip_unzip "-f"                                          "-f"  "0"
-    zip_unzip "-f -c -400"                                  "-f"  "1"
-    zip_unzip "-f -c 99999999999999999999999999"            "-f"  "1"
-    zip_unzip "-f -h"                                       ""    "1"
-    zip_unzip "-f"                                          ""    "0"
-    zip_unzip ""                                            "-f"  "0"
-    zip_unzip "-fabc"                                       "-f"  "1"
-    zip_unzip "-f"                                          "-fa" "1"
-    zip_unzip "-f"                                          "-h"  "1"
+    zip_unzip ""                                            ""    "0"   "${filenames[@]}"
+    zip_unzip ""                                            ""    "1"   "${filename_not_existing[@]}"
+    zip_unzip "-f -c 100"                                   "-f"  "0"   "${filenames[@]}"
+    zip_unzip "-f -c 100"                                   "-f"  "1"   "${filename_not_existing[@]}"
+    zip_unzip "-f -c 1"                                     "-f"  "0"   "${filenames[@]}"
+    zip_unzip "-f -c 1"                                     "-f"  "1"   "${filename_not_existing[@]}"
+    zip_unzip "-f"                                          "-f"  "0"   "${filenames[@]}"
+    zip_unzip "-f"                                          "-f"  "1"   "${filename_not_existing[@]}"
+    zip_unzip "-f -c -400"                                  "-f"  "1"   "${filenames[@]}"
+    zip_unzip "-f -c 99999999999999999999999999"            "-f"  "1"   "${filenames[@]}"
+    zip_unzip "-f -h"                                       ""    "0"   "${filenames[@]}"
+    zip_unzip "-f"                                          ""    "0"   "${filenames[@]}"
+    zip_unzip "-f"                                          ""    "1"   "${filename_not_existing[@]}"
+    zip_unzip ""                                            "-f"  "0"   "${filenames[@]}"
+    zip_unzip ""                                            "-f"  "1"   "${filename_not_existing[@]}"
+    zip_unzip "-fabc"                                       "-f"  "1"   "${filenames[@]}"
+    zip_unzip "-f"                                          "-fa" "1"   "${filenames[@]}"
+    zip_unzip "-f"                                          "-h"  "0"   "${filenames[@]}"
+
 
 
     sudo rm -f tests/files/*.zip tests/files/*.unzip
