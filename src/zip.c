@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
 
   if (config.hFlag) {
     printInfo();
-  
+
   } else if (retCode == (int)OK) {
     // filename or filename + archive name
     if (argc >= 1 && argc <= 2) {
@@ -58,8 +58,7 @@ int scanOptions(int argc, char** argv, OptionsConfig* config) {
         break;
       case 'c':
         config->cFlag = 1;
-        if (result == 0)
-          result = (int)readFromC(optarg, config);
+        if (result == 0) result = (int)readFromC(optarg, config);
         break;
       default:
         result = -1;
