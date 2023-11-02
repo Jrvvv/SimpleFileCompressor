@@ -92,6 +92,7 @@ zip_unzip() {
                 echo "-------------------"
                 echo PARAMS ARE ${zip_flags} ${unzip_flags} ${result}
             fi
+
         # if -h used no error possible
         elif grep -q 'h' <<< ${zip_flags} || grep -q 'h' <<< ${unzip_flags} ; then
             (( count++ ))
