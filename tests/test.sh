@@ -5,7 +5,7 @@ filenames=(
       "tests/files/test2.txt"
 )
 
-filename_not_existing=(
+filenames_not_existing=(
       "aaaooo.txt"
       ""
 )
@@ -121,20 +121,20 @@ if [ -e ${ZIP_APP} ] && [ -e ${UNZIP_APP} ]; then
 
     # test cases: args for zip, args for unzip, expected error(1)/no_error(0), list of filenames (exist/don't exist)
     zip_unzip ""                                            ""    "0"   "${filenames[@]}"
-    zip_unzip ""                                            ""    "1"   "${filename_not_existing[@]}"
+    zip_unzip ""                                            ""    "1"   "${filenames_not_existing[@]}"
     zip_unzip "-f -c 100"                                   "-f"  "0"   "${filenames[@]}"
-    zip_unzip "-f -c 100"                                   "-f"  "1"   "${filename_not_existing[@]}"
+    zip_unzip "-f -c 100"                                   "-f"  "1"   "${filenames_not_existing[@]}"
     zip_unzip "-f -c 1"                                     "-f"  "0"   "${filenames[@]}"
-    zip_unzip "-f -c 1"                                     "-f"  "1"   "${filename_not_existing[@]}"
+    zip_unzip "-f -c 1"                                     "-f"  "1"   "${filenames_not_existing[@]}"
     zip_unzip "-f"                                          "-f"  "0"   "${filenames[@]}"
-    zip_unzip "-f"                                          "-f"  "1"   "${filename_not_existing[@]}"
+    zip_unzip "-f"                                          "-f"  "1"   "${filenames_not_existing[@]}"
     zip_unzip "-f -c -400"                                  "-f"  "1"   "${filenames[@]}"
     zip_unzip "-f -c 99999999999999999999999999"            "-f"  "1"   "${filenames[@]}"
     zip_unzip "-f -h"                                       ""    "0"   "${filenames[@]}"
     zip_unzip "-f"                                          ""    "0"   "${filenames[@]}"
-    zip_unzip "-f"                                          ""    "1"   "${filename_not_existing[@]}"
+    zip_unzip "-f"                                          ""    "1"   "${filenames_not_existing[@]}"
     zip_unzip ""                                            "-f"  "0"   "${filenames[@]}"
-    zip_unzip ""                                            "-f"  "1"   "${filename_not_existing[@]}"
+    zip_unzip ""                                            "-f"  "1"   "${filenames_not_existing[@]}"
     zip_unzip "-fabc"                                       "-f"  "1"   "${filenames[@]}"
     zip_unzip "-f"                                          "-fa" "1"   "${filenames[@]}"
     zip_unzip "-f"                                          "-h"  "0"   "${filenames[@]}"
