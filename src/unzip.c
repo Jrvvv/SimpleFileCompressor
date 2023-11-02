@@ -109,61 +109,64 @@ int unzip(const char* archive_filename, const char* filename,
   }
 
   // getting archive file size
-  off_t input_size = st.st_size;
+  off_t archive_size = st.st_size;
 
-  // if (!input_size) {
-  //   ftruncate(archive_fd, DEFAULT_CHUNK_SIZE);
-  // }
-
-  // mem mapping of archive file
-  void* archive_data =
-      mmap(NULL, input_size, PROT_READ, MAP_PRIVATE, archive_fd, 0);
-  if (archive_data == MAP_FAILED) {
-    perror("Error mapping input file to memory");
-    close(archive_fd);
-    close(output_fd);
-    return (int)ERROR;
-  }
-
-  // struct init for decompression
-  z_stream stream;
-  memset(&stream, 0, sizeof(stream));
-
-  if (inflateInit(&stream) != Z_OK) {
-    perror("Error initializing decompression stream");
-    munmap(archive_data, input_size);
-    close(archive_fd);
-    close(output_fd);
-    return (int)ERROR;
-  }
-
-  // translating archive data ptr and its size to struct
-  stream.avail_in = input_size;
-  stream.next_in = (Bytef*)archive_data;
-
-  unsigned char out[DEFAULT_CHUNK_SIZE];
-  int ret;
-  do {
-    stream.avail_out = DEFAULT_CHUNK_SIZE;
-    stream.next_out = out;
-    // archive decompression and writing to output file
-    ret = inflate(&stream, Z_NO_FLUSH);
-    if (ret == Z_STREAM_ERROR) {
-      perror("Error decompressing data");
-      inflateEnd(&stream);
-      munmap(archive_data, input_size);
+  // check if archive is not empty
+  // if empty -- empty output file already written
+  if (archive_size) {
+    // mem mapping of archive file
+    void* archive_data =
+        mmap(NULL, archive_size, PROT_READ, MAP_PRIVATE, archive_fd, 0);
+    if (archive_data == MAP_FAILED) {
+      perror("Error mapping input file to memory");
       close(archive_fd);
       close(output_fd);
       return (int)ERROR;
     }
-    write(output_fd, out, DEFAULT_CHUNK_SIZE - stream.avail_out);
-  } while (ret != Z_STREAM_END);
+
+    // struct init for decompression
+    z_stream stream;
+    memset(&stream, 0, sizeof(stream));
+
+    if (inflateInit(&stream) != Z_OK) {
+      perror("Error initializing decompression stream");
+      munmap(archive_data, archive_size);
+      close(archive_fd);
+      close(output_fd);
+      return (int)ERROR;
+    }
+
+    // translating archive data ptr and its size to struct
+    stream.avail_in = archive_size;
+    stream.next_in = (Bytef*)archive_data;
+
+    unsigned char out[DEFAULT_CHUNK_SIZE];
+    int ret;
+    do {
+      stream.avail_out = DEFAULT_CHUNK_SIZE;
+      stream.next_out = out;
+      // archive decompression and writing to output file
+      ret = inflate(&stream, Z_NO_FLUSH);
+      if (ret == Z_STREAM_ERROR) {
+        perror("Error decompressing data");
+        inflateEnd(&stream);
+        munmap(archive_data, archive_size);
+        close(archive_fd);
+        close(output_fd);
+        return (int)ERROR;
+      }
+      write(output_fd, out, DEFAULT_CHUNK_SIZE - stream.avail_out);
+    } while (ret != Z_STREAM_END);
+
+    // free
+    inflateEnd(&stream);
+    munmap(archive_data, archive_size);
+  }
 
   // calc file hash at end
   unsigned char hash_end[SHA256_DIGEST_LENGTH];
   if (calculate_file_hash(archive_filename, hash_end) == -1) {
     perror("Error while hashing files");
-    munmap(archive_data, input_size);
     close(archive_fd);
     close(output_fd);
     return (int)ERROR;
@@ -171,16 +174,13 @@ int unzip(const char* archive_filename, const char* filename,
 
   // checking hashes (archive at start <-> archive at end)
   if ((memcmp(hash_end, hash_start, SHA256_DIGEST_LENGTH) != 0)) {
-    fprintf(stderr, "Error: File content was modified during copying\n");
-    munmap(archive_data, input_size);
+    perror("Error: File content was modified during copying");
     close(archive_fd);
     close(output_fd);
     return (int)ERROR;
   }
 
   // free
-  inflateEnd(&stream);
-  munmap(archive_data, input_size);
   close(archive_fd);
   close(output_fd);
   return 0;

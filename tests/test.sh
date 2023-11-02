@@ -1,8 +1,9 @@
 #!/bin/bash
 
 filenames=(
-      "tests/files/test1.txt"
-      "tests/files/test2.txt"
+      "tests/files/test1.txt" # simple file
+      "tests/files/test2.txt" # large file
+      "tests/files/test3.txt" # empty file
 )
 
 filenames_not_existing=(

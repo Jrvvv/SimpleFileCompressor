@@ -138,53 +138,60 @@ int zip(const char* filename, const char* archive_filename,
   // getting input file size
   off_t input_size = st.st_size;
 
-  // mem mapping of input file
-  void* input_data =
-      mmap(NULL, input_size, PROT_READ, MAP_PRIVATE, input_fd, 0);
-  if (input_data == MAP_FAILED) {
-    perror("Error mapping input file to memory");
-    close(input_fd);
-    close(archive_fd);
-    return (int)ERROR;
-  }
+  // check if file is not empty
+  // if empty -- empty archive already written
+  if (input_size != 0) {
+    // mem mapping of input file
+    void* input_data =
+        mmap(NULL, input_size, PROT_READ, MAP_PRIVATE, input_fd, 0);
+    if (input_data == MAP_FAILED) {
+      perror("Error mapping input file to memory");
+      close(input_fd);
+      close(archive_fd);
+      return (int)ERROR;
+    }
 
-  // struct init for compression
-  z_stream stream;
-  memset(&stream, 0, sizeof(stream));
+    // struct init for compression
+    z_stream stream;
+    memset(&stream, 0, sizeof(stream));
 
-  if (deflateInit(&stream, Z_DEFAULT_COMPRESSION) != Z_OK) {
-    perror("Error initializing compression stream");
-    munmap(input_data, input_size);
-    close(input_fd);
-    close(archive_fd);
-    return (int)ERROR;
-  }
-
-  // passing input data ptr and its size to struct
-  stream.avail_in = input_size;
-  stream.next_in = (Bytef*)input_data;
-
-  unsigned char out[config.chunksNumber];
-  do {
-    stream.avail_out = config.chunksNumber;
-    stream.next_out = out;
-    // input file compression and writing to archive
-    if (deflate(&stream, Z_FINISH) == Z_STREAM_ERROR) {
-      perror("Error compressing data");
-      deflateEnd(&stream);
+    if (deflateInit(&stream, Z_DEFAULT_COMPRESSION) != Z_OK) {
+      perror("Error initializing compression stream");
       munmap(input_data, input_size);
       close(input_fd);
       close(archive_fd);
       return (int)ERROR;
     }
-    write(archive_fd, out, config.chunksNumber - stream.avail_out);
-  } while (stream.avail_out == 0);
+
+    // passing input data ptr and its size to struct
+    stream.avail_in = input_size;
+    stream.next_in = (Bytef*)input_data;
+
+    unsigned char out[config.chunksNumber];
+    do {
+      stream.avail_out = config.chunksNumber;
+      stream.next_out = out;
+      // input file compression and writing to archive
+      if (deflate(&stream, Z_FINISH) == Z_STREAM_ERROR) {
+        perror("Error compressing data");
+        deflateEnd(&stream);
+        munmap(input_data, input_size);
+        close(input_fd);
+        close(archive_fd);
+        return (int)ERROR;
+      }
+      write(archive_fd, out, config.chunksNumber - stream.avail_out);
+    } while (stream.avail_out == 0);
+
+    // free
+    munmap(input_data, input_size);
+    deflateEnd(&stream);
+  }
 
   // calc file hash at end
   unsigned char hash_end[SHA256_DIGEST_LENGTH];
   if (calculate_file_hash(filename, hash_end) == -1) {
     perror("Error while hashing files");
-    munmap(input_data, input_size);
     close(input_fd);
     close(archive_fd);
     return (int)ERROR;
@@ -192,16 +199,13 @@ int zip(const char* filename, const char* archive_filename,
 
   // checking hashes (file at start <-> file at end)
   if ((memcmp(hash_end, hash_start, SHA256_DIGEST_LENGTH) != 0)) {
-    fprintf(stderr, "Error: File content was modified during copying\n");
-    munmap(input_data, input_size);
+    perror("Error: File content was modified during copying\n");
     close(input_fd);
     close(archive_fd);
     return (int)ERROR;
   }
 
   // free
-  deflateEnd(&stream);
-  munmap(input_data, input_size);
   close(input_fd);
   close(archive_fd);
   return 0;

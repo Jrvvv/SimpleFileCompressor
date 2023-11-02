@@ -5,7 +5,9 @@ LIBS = -lz -lssl -lcrypto
 SRCS_ZIP := src/zip.c src/hashing.c
 SRCS_UNZIP := src/unzip.c src/hashing.c
 
-all : clean zip unzip test
+all : clean build test
+
+build : zip unzip
 
 zip :
 	$(CC) $(CFLAGS) $(SRCS_ZIP) -o build/$@ $(LIBS)
